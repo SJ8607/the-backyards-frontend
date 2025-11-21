@@ -15,7 +15,7 @@ function Kitchen() {
   // Function to fetch orders
   const fetchOrders = async () => {
     try {
-      const response = await fetch('hhttps://the-backyards-api.onrender.com/api/orders');
+      const response = await fetch('https://the-backyards-api.onrender.com/api/orders');
       const data = await response.json();
       setOrders(data);
     } catch (error) {
