@@ -1,18 +1,21 @@
 import React, { useState, useEffect } from 'react';
 
-// Copying the menu here so the Kitchen knows the names
-// (In a real app, we would fetch this from the database too!)
-const MENU_ITEMS = [
-  { id: 1, name: 'Classic Burger' },
-  { id: 2, name: 'Peri Peri Fries' },
-  { id: 3, name: 'Cold Coffee' },
-  { id: 4, name: 'Masala Chai' },
-];
-
 function Kitchen() {
   const [orders, setOrders] = useState([]);
+  const [menu, setMenu] = useState([]); // Store the menu here to look up names
 
-  // Function to fetch orders
+  // --- 1. FETCH MENU (To translate IDs to Names) ---
+  const fetchMenu = async () => {
+    try {
+      const response = await fetch('https://the-backyards-api.onrender.com/api/menu');
+      const data = await response.json();
+      setMenu(data);
+    } catch (error) {
+      console.error("Error fetching menu:", error);
+    }
+  };
+
+  // --- 2. FETCH ORDERS FUNCTION ---
   const fetchOrders = async () => {
     try {
       const response = await fetch('https://the-backyards-api.onrender.com/api/orders');
@@ -23,90 +26,70 @@ function Kitchen() {
     }
   };
 
-  // Initial Load & Auto-Refresh
+  // --- 3. AUTO-REFRESH (Every 5 seconds) ---
   useEffect(() => {
-    fetchOrders();
-    const interval = setInterval(fetchOrders, 5000); // Refresh every 5 sec
-    return () => clearInterval(interval);
+    fetchMenu();   // Get names once when page loads
+    fetchOrders(); // Get initial orders
+    
+    const interval = setInterval(fetchOrders, 5000); // Poll orders every 5 sec
+    return () => clearInterval(interval); 
   }, []);
 
-  // --- NEW: HANDLE "ORDER READY" ---
-  const handleOrderReady = async (orderId) => {
+  // --- 4. MARK AS DONE FUNCTION ---
+  const handleCompleteOrder = async (orderId) => {
     try {
-      // Call the backend DELETE endpoint
       await fetch(`https://the-backyards-api.onrender.com/api/orders/${orderId}`, {
         method: 'DELETE'
       });
-      // Refresh the list immediately
-      fetchOrders(); 
+      fetchOrders(); // Refresh list immediately
     } catch (error) {
-      alert("Error updating order");
+      alert("Error completing order");
     }
+  };
+
+  // Helper to find name from ID
+  const getItemName = (id) => {
+    const foundItem = menu.find(item => item._id === id);
+    return foundItem ? foundItem.name : id; // Return Name if found, else return ID
   };
 
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif', backgroundColor: '#222', minHeight: '100vh', color: 'white' }}>
-      <h1 style={{ textAlign: 'center', color: '#fff', borderBottom: '1px solid #444', paddingBottom: '10px' }}>
-        👨‍🍳 KITCHEN DISPLAY SYSTEM (KDS)
-      </h1>
-      
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'center', marginTop: '20px' }}>
-        {orders.length === 0 ? (
-          <p style={{ color: '#888', fontSize: '20px' }}>No active orders. Waiting...</p>
-        ) : (
-          orders.map((order) => (
-            <div key={order._id} style={{ 
-              border: '4px solid #e65100', // Orange border for visibility
-              backgroundColor: 'white',
-              color: 'black',
-              width: '300px', 
-              borderRadius: '10px',
-              overflow: 'hidden',
-              boxShadow: '0 0 15px rgba(255, 165, 0, 0.5)'
-            }}>
-              
-              {/* Card Header */}
-              <div style={{ backgroundColor: '#e65100', padding: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h2 style={{ margin: 0, color: 'white', fontSize: '24px' }}>Table {order.tableNumber}</h2>
-                <span style={{ backgroundColor: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>
-                  {new Date(order.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                </span>
-              </div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px' }}>
+        <h1>👨‍🍳 Kitchen Display System (KDS)</h1>
+        <button onClick={fetchOrders} style={{ padding:'10px 20px', background:'orange', border:'none', cursor:'pointer', fontWeight:'bold' }}>🔄 REFRESH</button>
+      </div>
 
-              {/* Order List */}
-              <div style={{ padding: '20px' }}>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                  {Object.entries(order.items).map(([itemId, qty]) => {
-                    // Lookup the name!
-                    const item = MENU_ITEMS.find(i => i.id === parseInt(itemId));
-                    return (
-                      <li key={itemId} style={{ fontSize: '20px', marginBottom: '8px', borderBottom: '1px dashed #ccc', paddingBottom: '5px' }}>
-                        <strong style={{ color: '#d32f2f' }}>{qty} x</strong> {item ? item.name : 'Unknown Item'}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
+        {orders.length === 0 && <p>No pending orders. Kitchen is quiet... 💤</p>}
 
-              {/* Complete Button */}
-              <button 
-                onClick={() => handleOrderReady(order._id)}
-                style={{ 
-                  width: '100%', 
-                  padding: '15px', 
-                  backgroundColor: '#2e7d32', // Green
-                  color: 'white', 
-                  fontSize: '18px', 
-                  fontWeight: 'bold', 
-                  border: 'none', 
-                  cursor: 'pointer',
-                  borderTop: '1px solid #ccc'
-                }}>
-                ✅ MARK AS READY
-              </button>
+        {orders.map((order) => (
+          <div key={order._id} style={{ 
+            backgroundColor: 'white', color: 'black', width: '300px', 
+            borderRadius: '10px', padding: '15px', borderLeft: '10px solid orange',
+            boxShadow: '0 4px 8px rgba(0,0,0,0.2)' 
+          }}>
+            <div style={{ display:'flex', justifyContent:'space-between', borderBottom:'1px solid #ccc', paddingBottom:'10px', marginBottom:'10px' }}>
+              <h2 style={{ margin:0 }}>Table {order.tableNumber}</h2>
+              <span style={{ fontSize:'12px', color:'#666' }}>{new Date(order.createdAt).toLocaleTimeString()}</span>
             </div>
-          ))
-        )}
+            
+            {/* ITEM LIST */}
+            <ul style={{ paddingLeft: '20px', marginBottom: '20px' }}>
+              {Object.entries(order.items).map(([itemId, qty]) => (
+                <li key={itemId} style={{ fontSize:'18px', fontWeight:'bold', marginBottom:'5px' }}>
+                  {qty} x {getItemName(itemId)} 
+                </li>
+              ))}
+            </ul>
+
+            <button 
+              onClick={() => handleCompleteOrder(order._id)}
+              style={{ width:'100%', padding:'15px', backgroundColor:'#28a745', color:'white', border:'none', fontSize:'16px', cursor:'pointer', borderRadius:'5px' }}>
+              ✅ ORDER READY
+            </button>
+          </div>
+        ))}
       </div>
     </div>
   );
