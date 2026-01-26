@@ -127,7 +127,7 @@ function OrderPage() {
   };
 
   // --- UPI QR GENERATOR URL ---
-  const getUPIQRUrl = () => {
+ const getUPIQRUrl = () => {
     // This creates a standard UPI link string
     const upiString = `upi://pay?pa=${RESTAURANT_UPI_ID}&pn=${RESTAURANT_NAME}&am=${totalPrice}&cu=INR`;
     // We encode it to generate a QR image
